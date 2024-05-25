@@ -1,0 +1,129 @@
+{
+    "goblin": {
+        "name": "Goblin",
+        "health": 20,
+        "maxHealth": 20,
+        "responses": ["The goblin snarls at you!"]
+    },
+    "wolf": {
+        "name": "Wolf",
+        "health": 15,
+        "maxHealth": 15,
+        "responses": ["The wolf growls menacingly."]
+    },
+    "villager": {
+        "name": "Villager",
+        "health": 10,
+        "maxHealth": 10,
+        "responses": ["The villager greets you warmly."]
+    },
+    "merchant": {
+        "name": "Merchant",
+        "health": 10,
+        "maxHealth": 10,
+        "responses": ["The merchant offers his wares."],
+        "items": {
+            "potion": {
+                "name": "Potion",
+                "price": 5,
+                "effect": "playerHp += 10; updateHpBar();"
+            }
+        }
+    },
+    "bat": {
+        "name": "Bat",
+        "health": 5,
+        "maxHealth": 5,
+        "responses": ["The bat screeches at you."]
+    },
+    "troll": {
+        "name": "Troll",
+        "health": 30,
+        "maxHealth": 30,
+        "responses": ["The troll roars!"]
+    },
+    "eagle": {
+        "name": "Eagle",
+        "health": 10,
+        "maxHealth": 10,
+        "responses": ["The eagle swoops down."]
+    },
+    "yeti": {
+        "name": "Yeti",
+        "health": 40,
+        "maxHealth": 40,
+        "responses": ["The yeti bellows loudly."]
+    },
+    "fish": {
+        "name": "Fish",
+        "health": 3,
+        "maxHealth": 3,
+        "responses": ["The fish swims calmly."]
+    },
+    "water_sprite": {
+        "name": "Water Sprite",
+        "health": 8,
+        "maxHealth": 8,
+        "responses": ["The water sprite dances on the lake."]
+    },
+    "scorpion": {
+        "name": "Scorpion",
+        "health": 12,
+        "maxHealth": 12,
+        "responses": ["The scorpion raises its stinger."]
+    },
+    "sandworm": {
+        "name": "Sandworm",
+        "health": 25,
+        "maxHealth": 25,
+        "responses": ["The sandworm emerges from the sand."]
+    },
+    "frog": {
+        "name": "Frog",
+        "health": 5,
+        "maxHealth": 5,
+        "responses": ["The frog croaks."]
+    },
+    "swamp_monster": {
+        "name": "Swamp Monster",
+        "health": 35,
+        "maxHealth": 35,
+        "responses": ["The swamp monster lumbers toward you."]
+    },
+    "ghost": {
+        "name": "Ghost",
+        "health": 10,
+        "maxHealth": 10,
+        "responses": ["The ghost moans eerily."]
+    },
+    "skeleton": {
+        "name": "Skeleton",
+        "health": 15,
+        "maxHealth": 15,
+        "responses": ["The skeleton rattles its bones."]
+    },
+    "rabbit": {
+        "name": "Rabbit",
+        "health": 4,
+        "maxHealth": 4,
+        "responses": ["The rabbit hops around."]
+    },
+    "deer": {
+        "name": "Deer",
+        "health": 12,
+        "maxHealth": 12,
+        "responses": ["The deer grazes peacefully."]
+    },
+    "knight": {
+        "name": "Knight",
+        "health": 20,
+        "maxHealth": 20,
+        "responses": ["The knight draws his sword."]
+    },
+    "dragon": {
+        "name": "Dragon",
+        "health": 50,
+        "maxHealth": 50,
+        "responses": ["The dragon breathes fire."]
+    }
+}

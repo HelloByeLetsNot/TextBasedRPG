@@ -1,0 +1,75 @@
+{
+    "forest": {
+        "description": "A dense forest with towering trees and thick underbrush.",
+        "npcs": ["goblin", "wolf"],
+        "exits": {
+            "north": "mountain",
+            "south": "village",
+            "east": "lake",
+            "west": "cave"
+        }
+    },
+    "village": {
+        "description": "A small village with friendly inhabitants.",
+        "npcs": ["villager", "merchant"],
+        "exits": {
+            "north": "forest"
+        }
+    },
+    "cave": {
+        "description": "A dark cave that echoes with unknown sounds.",
+        "npcs": ["bat", "troll"],
+        "exits": {
+            "east": "forest"
+        }
+    },
+    "mountain": {
+        "description": "A tall mountain with a treacherous path.",
+        "npcs": ["eagle", "yeti"],
+        "exits": {
+            "south": "forest"
+        }
+    },
+    "lake": {
+        "description": "A serene lake with clear water.",
+        "npcs": ["fish", "water_sprite"],
+        "exits": {
+            "west": "forest"
+        }
+    },
+    "desert": {
+        "description": "A vast desert with scorching heat.",
+        "npcs": ["scorpion", "sandworm"],
+        "exits": {
+            "north": "ruins"
+        }
+    },
+    "swamp": {
+        "description": "A murky swamp with thick mud.",
+        "npcs": ["frog", "swamp_monster"],
+        "exits": {
+            "east": "meadow"
+        }
+    },
+    "ruins": {
+        "description": "Ancient ruins filled with mystery.",
+        "npcs": ["ghost", "skeleton"],
+        "exits": {
+            "south": "desert"
+        }
+    },
+    "meadow": {
+        "description": "A peaceful meadow with colorful flowers.",
+        "npcs": ["rabbit", "deer"],
+        "exits": {
+            "west": "swamp"
+        }
+    },
+    "castle": {
+        "description": "An abandoned castle with crumbling walls.",
+        "npcs": ["knight", "dragon"],
+        "exits": {
+            "north": "village"
+        }
+    }
+}
