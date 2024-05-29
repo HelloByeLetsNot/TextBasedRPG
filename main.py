@@ -3,288 +3,307 @@ import random
 import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
+import threading
+from PIL import Image, ImageTk
 
-class RPGGame:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Text-Based RPG")
-        self.create_widgets()
-        self.load_data()
-        self.start_game()
+def load_json(file_name):
+    try:
+        with open(file_name, 'r') as file:
+            data = json.load(file)
+            if not data:
+                raise ValueError(f"The file {file_name} is empty or contains invalid JSON.")
+            return data
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"Error loading {file_name}: {e}")
+        return []
 
-    def create_widgets(self):
-        self.output_frame = ttk.Frame(self.master)
-        self.output_frame.pack(padx=10, pady=10, fill='both', expand=True)
+locations = load_json('locations.json')
+items = load_json('items.json')
+npcs = load_json('npcs.json')
+shops = load_json('shops.json')
+leaderboard = load_json('leaderboard.json')
 
-        self.output = tk.Text(self.output_frame, wrap='word', state='disabled', bg='#2c3e50', fg='#e0e0e0')
-        self.output.pack(padx=10, pady=10, fill='both', expand=True)
+player = {"name": "", "location": {}, "inventory": [], "hp": 100, "attack": 1, "defense": 1, "gold": 100, "kills": 0}
+current_shop = current_npc = None
 
-        self.input_frame = ttk.Frame(self.master)
-        self.input_frame.pack(padx=10, pady=10, fill='x')
-
-        self.input_var = tk.StringVar()
-        self.input_entry = ttk.Entry(self.input_frame, textvariable=self.input_var)
-        self.input_entry.pack(side='left', padx=5, pady=5, fill='x', expand=True)
-        self.input_entry.bind('<Return>', self.handle_input)
-
-        self.enter_button = ttk.Button(self.input_frame, text="Enter", command=self.handle_input)
-        self.enter_button.pack(side='right', padx=5, pady=5)
-
-        self.leaderboard_frame = ttk.Frame(self.master)
-        self.leaderboard_frame.pack(padx=10, pady=10, fill='x')
-
-        self.leaderboard_label = ttk.Label(self.leaderboard_frame, text="Leaderboard")
-        self.leaderboard_label.pack(padx=10, pady=5)
-
-        self.leaderboard = tk.Text(self.leaderboard_frame, wrap='word', state='disabled', bg='#2c3e50', fg='#e0e0e0', height=10)
-        self.leaderboard.pack(padx=10, pady=5, fill='x')
-
-    def load_data(self):
-        with open('locations.json') as f:
-            self.areas = json.load(f)
-        with open('npcs.json') as f:
-            self.npcs = json.load(f)
-        self.player_hp = 100
-        self.player_gold = 10
-        self.player_inventory = []
-        self.navigation_count = 0
-        self.current_area = 'forest'
-        self.current_npc = None
-        self.username = 'Player'
-        self.player_xp = 0
-        self.player_level = 1
-
-        try:
-            with open('leaderboard.json') as f:
-                self.leaderboard_data = json.load(f)
-        except FileNotFoundError:
-            self.leaderboard_data = []
-
-    def start_game(self):
-        self.output_message(f"Welcome to the game, {self.username}! You start in a forest. {self.areas[self.current_area]['description']}")
-        self.update_leaderboard()
-
-    def output_message(self, message):
-        self.output.config(state='normal')
-        self.output.insert(tk.END, message + "\n")
-        self.output.config(state='disabled')
-        self.output.see(tk.END)
-
-    def handle_input(self, event=None):
-        command = self.input_var.get()
-        self.input_var.set("")
-        self.process_command(command)
-
-    def process_command(self, command):
-        parts = command.split(' ')
-        main_command = parts[0].toLowerCase()
-        argument = ' '.join(parts[1:])
-
-        if main_command == 'go':
-            self.move(argument)
-        elif main_command == 'explore':
-            self.explore()
-        elif main_command == 'attack':
-            self.attack(argument)
-        elif main_command == 'trade':
-            self.trade(argument)
-        elif main_command == 'buy':
-            self.buy(argument)
-        elif main_command == 'sell':
-            self.sell(argument)
-        elif main_command == 'leave':
-            self.leave()
-        elif main_command == 'help':
-            self.show_help()
-        elif main_command == 'end':
-            self.end_game()
-        elif main_command == 'inventory':
-            self.show_inventory()
+def explore():
+    global current_npc
+    if player["location"].get("is_town", False):
+        if random.random() < player["location"].get("encounter_rate", 0):
+            current_npc = encounter_npc()
+        elif random.random() < player["location"].get("drop_rate", 0):
+            find_item()
         else:
-            pass  # Do nothing for unknown commands
+            find_merchant()
+    else:
+        if random.random() < player["location"].get("encounter_rate", 0):
+            current_npc = encounter_npc()
+        if random.random() < player["location"].get("drop_rate", 0):
+            find_item()
+    update_hp_bars()
 
-    def move(self, direction):
-        if not self.areas[self.current_area].get('exits') or not self.areas[self.current_area]['exits'].get(direction):
-            self.output_message("You can't go that way.")
-            return
-        self.current_area = self.areas[self.current_area]['exits'][direction]
-        self.navigation_count += 1
-        self.output_message(f"You move {direction} to the {self.current_area}. {self.areas[self.current_area]['description']}")
-        self.explore()
+def travel(direction):
+    player["location"] = random.choice(locations) if locations else {}
+    update_status(f"You traveled {direction} and arrived at {player['location'].get('name', 'unknown place')}. {player['location'].get('description', '')}")
 
-    def explore(self):
-        if random.random() < 0.4:
-            npcs_in_area = self.areas[self.current_area]['npcs']
-            npc_name = random.choice(npcs_in_area)
-            self.current_npc = self.npcs[npc_name]
-            self.output_message(f"You encounter a {self.current_npc['name']}. {self.current_npc['responses'][0]}")
-        else:
-            self.output_message("You find nothing of interest.")
+def encounter_npc():
+    npc = random.choice(npcs) if npcs else {}
+    update_status(f"You encountered a {npc.get('name', 'mysterious entity')}! {npc.get('dialogue', '')}")
+    return npc
 
-    def attack(self, target):
-        if not self.current_npc:
-            self.output_message("There is no one to attack.")
-            return
+def find_item():
+    item = random.choice(items) if items else {}
+    player["inventory"].append(item)
+    update_status(f"You found a {item.get('name', 'mysterious item')}!")
 
-        player_roll = random.randint(1, 20)
-        npc_roll = random.randint(1, 20)
+def find_merchant():
+    global current_shop
+    current_shop = random.choice(shops) if shops else {}
+    update_status(f"You found a merchant in {current_shop.get('name', 'unknown place')}! {current_shop.get('description', '')} {current_shop.get('dialogue', '')}")
+    update_status("Items for sale:")
+    for item in current_shop.get("items", []):
+        update_status(f"{item['name']}: {item['price']} gold")
 
-        self.output_message(f"You roll a {player_roll} to attack.")
-        self.output_message(f"{self.current_npc['name']} rolls a {npc_roll} to defend.")
-
-        if player_roll == 1:
-            self.player_hp -= 1
-            self.output_message("You fumble and hurt yourself!")
-        elif player_roll == 20:
-            self.current_npc['health'] -= 10
-            self.output_message(f"Critical hit! You deal 10 damage to the {self.current_npc['name']}.")
-        elif player_roll > npc_roll:
-            self.current_npc['health'] -= (player_roll - npc_roll)
-            self.output_message(f"You hit the {self.current_npc['name']} for {player_roll - npc_roll} damage.")
-        else:
-            self.output_message("You miss.")
-
-        if self.current_npc['health'] <= 0:
-            self.output_message(f"You have defeated the {self.current_npc['name']}.")
-            self.add_item_to_inventory('gold', 5)
-            self.player_xp += 10
-            self.output_message(f"You find 5 gold on the {self.current_npc['name']} and gain 10 XP.")
-            self.current_npc = None
-            self.check_level_up()
-        else:
-            self.npc_attack()
-
-    def npc_attack(self):
-        npc_roll = random.randint(1, 20)
-        player_roll = random.randint(1, 20)
-
-        self.output_message(f"{self.current_npc['name']} rolls a {npc_roll} to attack.")
-        self.output_message(f"You roll a {player_roll} to defend.")
-
-        if npc_roll == 1:
-            self.current_npc['health'] -= 1
-            self.output_message(f"{self.current_npc['name']} fumbles and hurts itself!")
-        elif npc_roll == 20:
-            self.player_hp -= 10
-            self.output_message(f"Critical hit! The {self.current_npc['name']} deals 10 damage to you.")
-        elif npc_roll > player_roll:
-            self.player_hp -= (npc_roll - player_roll)
-            self.output_message(f"The {self.current_npc['name']} hits you for {npc_roll - player_roll} damage.")
-        else:
-            self.output_message(f"The {self.current_npc['name']} misses.")
-
-        if self.player_hp <= 0:
-            self.end_game()
-
-    def add_item_to_inventory(self, name, quantity):
-        for item in self.player_inventory:
-            if item['name'] == name:
-                item['quantity'] += quantity
+def battle():
+    global current_npc
+    if current_npc:
+        update_status("Battle starts!")
+        while player["hp"] > 0 and current_npc.get("hp", 0) > 0:
+            attack_roll = random.randint(1, 20) + player["attack"]
+            defense_roll = random.randint(1, 20) + current_npc.get("defense", 0)
+            if attack_roll > defense_roll:
+                damage = attack_roll - defense_roll
+                current_npc["hp"] -= damage
+                update_status(f"You dealt {damage} damage to {current_npc['name']}.")
+            else:
+                damage = defense_roll - attack_roll
+                player["hp"] -= damage
+                update_status(f"{current_npc['name']} dealt {damage} damage to you.")
+            update_hp_bars()
+            if player["hp"] <= 0:
+                update_status("You have been defeated!")
+                update_leaderboard()
+                new_game_prompt()
                 return
-        self.player_inventory.append({'name': name, 'quantity': quantity})
-
-    def trade(self, npc_name):
-        if npc_name.lower() != 'merchant' or not self.current_npc or self.current_npc['name'].lower() != 'merchant':
-            self.output_message("There is no merchant to trade with.")
-            return
-        self.output_message("The merchant offers the following items:")
-        for item in self.current_npc['items']:
-            self.output_message(f"{item}: {self.current_npc['items'][item]['price']} gold")
-
-    def buy(self, item_name):
-        if not self.current_npc or self.current_npc['name'].lower() != 'merchant':
-            self.output_message("There is no merchant to buy from.")
-            return
-        item = self.current_npc['items'].get(item_name)
-        if not item:
-            self.output_message("The merchant does not have that item.")
-            return
-        if self.player_gold < item['price']:
-            self.output_message("You do not have enough gold to buy that.")
-            return
-        self.player_gold -= item['price']
-        self.add_item_to_inventory(item_name, 1)
-        self.output_message(f"You buy a {item_name}.")
-
-    def sell(self, item_name):
-        for item in self.player_inventory:
-            if item['name'].lower() == item_name.lower():
-                if item['quantity'] > 1:
-                    item['quantity']-= 1
-                else:
-                    self.player_inventory.remove(item)
-                self.player_gold += item['price']
-                self.output_message(f"You sell a {item_name}.")
+            elif current_npc["hp"] <= 0:
+                update_status(f"You defeated {current_npc['name']}!")
+                player["kills"] += 1
+                drop_items(current_npc.get("drops", []))
+                current_npc = None
+                update_hp_bars()
                 return
-        self.output_message("You do not have that item.")
+    else:
+        update_status("No NPC to attack.")
 
-    def leave(self):
-        if not self.current_npc or self.current_npc['name'].lower() != 'merchant':
-            self.output_message("There is no one to leave.")
+def drop_items(drops):
+    for drop in drops:
+        item = next((item for item in items if item["name"] == drop), {})
+        player["inventory"].append(item)
+        update_status(f"You received a {item.get('name', 'mysterious item')} from the defeated enemy.")
+
+def equip_item(item_name):
+    for item in player["inventory"]:
+        if item["name"].lower() == item_name.lower():
+            if item["type"] == "weapon":
+                player["attack"] += item["stats"]["attack"]
+            elif item["type"] == "armor":
+                player["defense"] += item["stats"]["defense"]
+            update_status(f"You equipped {item['name']}.")
             return
-        self.current_npc = None
-        self.output_message("You leave the merchant's stall.")
+    update_status("Item not found in inventory.")
 
-    def show_help(self):
-        self.output_message("""
-            Commands:
-            - go [direction]: Move in a specified direction (north, south, east, west)
-            - explore: Explore the current area for NPCs or other interactions
-            - attack [npc]: Attack a specific NPC
-            - attack: Attack the current NPC
-            - trade merchant: Trade with the merchant NPC
-            - buy [item]: Buy an item from the merchant
-            - sell [item]: Sell an item to the merchant
-            - leave: Leave the merchant's stall
-            - help: List the description of things you can do and that can happen
-            - end: End your game session and save your score
-            - inventory: Show your current inventory
-        """)
+def use_item(item_name):
+    for item in player["inventory"]:
+        if item["name"].lower() == item_name.lower() and item["type"] == "consumable":
+            if "hp_restore" in item["effect"]:
+                player["hp"] += item["effect"]["hp_restore"]
+                player["inventory"].remove(item)
+                update_status(f"You used {item['name']} and restored {item['effect']['hp_restore']} HP.")
+            return
+    update_status("Item not found or not usable.")
 
-    def update_inventory(self):
-        inventory_items = ', '.join(f"{item['name']} ({item['quantity']})" for item in self.player_inventory)
-        self.output_message(f"Inventory: {inventory_items or 'Your inventory is empty.'}")
+def visit_shop(shop_name):
+    for shop in shops:
+        if shop["name"].lower() == shop_name.lower():
+            global current_shop
+            current_shop = shop
+            update_status(f"You entered {shop['name']}. {shop['description']} {shop['dialogue']}")
+            update_status("Items for sale:")
+            for item in shop["items"]:
+                update_status(f"{item['name']}: {item['price']} gold")
+            return shop
+    update_status("Shop not found.")
+    return None
 
-    def check_level_up(self):
-        if self.player_xp >= self.player_level * 100:
-            self.player_level += 1
-            self.player_xp = 0
-            self.output_message(f"You leveled up! You are now level {self.player_level}.")
+def buy_item(shop, item_name):
+    for item in shop["items"]:
+        if item["name"].lower() == item_name.lower():
+            if player["gold"] >= item["price"]:
+                player["gold"] -= item["price"]
+                player["inventory"].append(next((i for i in items if i["name"] == item["name"]), {}))
+                update_status(f"You bought {item['name']} for {item['price']} gold.")
+                return
+            else:
+                update_status("You don't have enough gold.")
+                return
+    update_status("Item not found in shop.")
 
-    def update_leaderboard(self):
-        self.leaderboard.config(state='normal')
-        self.leaderboard.delete(1.0, tk.END)
-        for entry in self.leaderboard_data:
-            self.leaderboard.insert(tk.END, f"{entry['username']}: {entry['score']} points\n")
-        self.leaderboard.config(state='disabled')
+def sell_item(item_name):
+    for item in player["inventory"]:
+        if item["name"].lower() == item_name.lower():
+            sale_price = next((i["price"] for shop in shops for i in shop["items"] if i["name"] == item["name"]), 0) // 2
+            player["gold"] += sale_price
+            player["inventory"].remove(item)
+            update_status(f"You sold {item['name']} for {sale_price} gold.")
+            return
+    update_status("Item not found in inventory.")
 
-    def end_game(self):
-        score = self.calculate_score()
-        self.save_to_leaderboard(self.username, score)
-        self.output_message(f"Game over! Your score: {score}")
-        self.output_message("You have died and lost all your progress. This is permadeath.")
-        self.player_hp = 100
-        self.player_gold = 10
-        self.player_inventory = []
-        self.player_xp = 0
-        self.player_level = 1
-        self.navigation_count = 0
-        self.current_area = 'forest'
-        self.current_npc = None
-        self.update_leaderboard()
+def update_status(message):
+    status_label.config(state=tk.NORMAL)
+    status_label.insert(tk.END, message + "\n")
+    status_label.config(state=tk.DISABLED)
+    status_label.yview(tk.END)
 
-    def calculate_score(self):
-        return self.navigation_count + sum(item['quantity'] for item in self.player_inventory) + self.player_gold + self.player_xp
+def update_hp_bars():
+    player_hp_var.set(f"HP: {player['hp']}")
+    if current_npc:
+        npc_hp_var.set(f"{current_npc['name']} HP: {current_npc['hp']}")
+    else:
+        npc_hp_var.set("")
 
-    def save_to_leaderboard(self, username, score):
-        new_entry = {'username': username, 'score': score}
-        self.leaderboard_data.append(new_entry)
-        self.leaderboard_data = sorted(self.leaderboard_data, key=lambda x: x['score'], reverse=True)[:10]
-        with open('leaderboard.json', 'w') as f:
-            json.dump(self.leaderboard_data, f, indent=4)
-        self.update_leaderboard()
+def handle_command(event=None):
+    command = command_entry.get().strip().lower()
+    command_entry.delete(0, tk.END)
+    threading.Thread(target=process_command, args=(command,)).start()
 
-if __name__ == "__main__":
-    root = ThemedTk(theme="equilux")
-    app = RPGGame(root)
-    root.mainloop()
+def process_command(command):
+    if player["name"] == "":
+        player["name"] = command
+        start_game()
+    else:
+        if command == "explore":
+            explore()
+        elif command.startswith("travel"):
+            direction = command.split()[1]
+            travel(direction)
+        elif command == "inventory":
+            update_status("Your inventory:")
+            for item in player["inventory"]:
+                update_status(f"- {item['name']}: {item['description']}")
+        elif command.startswith("equip"):
+            item_name = command.split(" ", 1)[1]
+            equip_item(item_name)
+        elif command.startswith("use"):
+            item_name = command.split(" ", 1)[1]
+            use_item(item_name)
+        elif command.startswith("shop"):
+            shop_name = command.split(" ", 1)[1]
+            visit_shop(shop_name)
+        elif command.startswith("buy") and current_shop:
+            item_name = command.split(" ", 1)[1]
+            buy_item(current_shop, item_name)
+        elif command.startswith("sell"):
+            item_name = command.split(" ", 1)[1]
+            sell_item(item_name)
+        else:
+            update_status("Unknown command. Please try again.")
+
+def start_game():
+    update_status(f"Welcome, {player['name']}!")
+    player["location"] = random.choice(locations) if locations else {}
+    update_status(f"Starting at {player['location'].get('name', 'an unknown place')}.")
+    update_status(player["location"].get('description', ''))
+    update_hp_bars()
+
+def new_game_prompt():
+    global player
+    player = {"name": "", "location": {}, "inventory": [], "hp": 100, "attack": 1, "defense": 1, "gold": 100, "kills": 0}
+    update_status("Please enter your name to start the game:")
+
+def update_leaderboard():
+    leaderboard.append({"name": player["name"], "kills": player["kills"]})
+    leaderboard.sort(key=lambda x: x["kills"], reverse=True)
+    with open('leaderboard.json', 'w') as file:
+        json.dump(leaderboard, file, indent=4)
+    leaderboard_var.set("\n".join([f"{entry['name']}: {entry['kills']} kills" for entry in leaderboard]))
+    if leaderboard_window:
+        update_leaderboard_popup()
+
+def update_leaderboard_popup():
+    leaderboard_text.delete(1.0, tk.END)
+    leaderboard_text.insert(tk.END, "\n".join([f"{entry['name']}: {entry['kills']} kills" for entry in leaderboard]))
+
+def leaderboard_popup():
+    global leaderboard_window, leaderboard_text
+    leaderboard_window = tk.Toplevel(root)
+    leaderboard_window.title("Leaderboard")
+    leaderboard_text = tk.Text(leaderboard_window, wrap="word", state=tk.NORMAL, height=20, width=40)
+    leaderboard_text.pack(padx=10, pady=10)
+    update_leaderboard_popup()
+
+def commands_popup():
+    commands_window = tk.Toplevel(root)
+    commands_window.title("Commands")
+    commands_text = tk.Text(commands_window, wrap="word", state=tk.NORMAL, height=20, width=40)
+    commands_text.pack(padx=10, pady=10)
+    commands_text.insert(tk.END, "Available commands:\n")
+    commands_text.insert(tk.END, "explore - Explore the current location\n")
+    commands_text.insert(tk.END, "travel <direction> - Travel in a direction (north, south, east, west)\n")
+    commands_text.insert(tk.END, "inventory - Show your inventory\n")
+    commands_text.insert(tk.END, "equip <item> - Equip an item from your inventory\n")
+    commands_text.insert(tk.END, "use <item> - Use an item from your inventory\n")
+    commands_text.insert(tk.END, "shop <name> - Visit a shop\n")
+    commands_text.insert(tk.END, "buy <item> - Buy an item from the current shop\n")
+    commands_text.insert(tk.END, "sell <item> - Sell an item from your inventory\n")
+    commands_text.config(state=tk.DISABLED)
+
+root = ThemedTk(theme="smog")
+root.title("Text-Based RPG")
+
+# Set the background image
+background_image = Image.open("background.png")
+bg_photo = ImageTk.PhotoImage(background_image)
+
+background_label = tk.Label(root, image=bg_photo)
+background_label.place(relwidth=1, relheight=1)
+
+main_frame = ttk.Frame(root, padding="10")
+main_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+status_label = tk.Text(main_frame, wrap="word", height=20, width=60)
+status_label.grid(row=0, column=0, columnspan=2)
+
+button_frame = ttk.Frame(main_frame)
+button_frame.grid(row=1, column=0, columnspan=2, pady=10)
+
+leaderboard_button = ttk.Button(button_frame, text="Leaderboard", command=leaderboard_popup)
+leaderboard_button.grid(row=0, column=0, padx=5)
+
+commands_button = ttk.Button(button_frame, text="Commands", command=commands_popup)
+commands_button.grid(row=0, column=1, padx=5)
+
+command_entry = ttk.Entry(main_frame, width=50)
+command_entry.grid(row=2, column=0, pady=5)
+
+command_entry.bind("<Return>", handle_command)
+
+command_button = ttk.Button(main_frame, text="Enter", command=handle_command)
+command_button.grid(row=2, column=1, pady=5)
+
+player_hp_var = tk.StringVar()
+player_hp_label = ttk.Label(main_frame, textvariable=player_hp_var)
+player_hp_label.grid(row=3, column=0, pady=5)
+
+npc_hp_var = tk.StringVar()
+npc_hp_label = ttk.Label(main_frame, textvariable=npc_hp_var)
+npc_hp_label.grid(row=3, column=1, pady=5)
+
+leaderboard_var = tk.StringVar()
+leaderboard_window = None
+
+update_leaderboard()
+update_hp_bars()
+
+new_game_prompt()
+
+root.mainloop()

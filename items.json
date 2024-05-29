@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Health Potion",
+        "description": "A potion that restores health.",
+        "type": "consumable",
+        "effect": {
+            "hp_restore": 20
+        }
+    },
+    {
+        "name": "Iron Sword",
+        "description": "A sturdy iron sword.",
+        "type": "weapon",
+        "stats": {
+            "attack": 5
+        }
+    },
+    {
+        "name": "Leather Armor",
+        "description": "Armor made of tough leather.",
+        "type": "armor",
+        "stats": {
+            "defense": 3
+        }
+    }
+]

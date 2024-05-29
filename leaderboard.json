@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Player1",
+        "kills": 5
+    },
+    {
+        "name": "Player2",
+        "kills": 3
+    },
+    {
+        "name": "",
+        "kills": 0
+    },
+    {
+        "name": "",
+        "kills": 0
+    },
+    {
+        "name": "",
+        "kills": 0
+    },
+    {
+        "name": "",
+        "kills": 0
+    }
+]

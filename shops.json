@@ -1,0 +1,17 @@
+[
+    {
+        "name": "General Store",
+        "description": "A small shop selling various items.",
+        "dialogue": "Welcome to the General Store!",
+        "items": [
+            {
+                "name": "Health Potion",
+                "price": 10
+            },
+            {
+                "name": "Leather Armor",
+                "price": 50
+            }
+        ]
+    }
+]
